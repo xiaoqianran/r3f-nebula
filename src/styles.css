@@ -79,7 +79,7 @@ body {
   z-index: 100;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 5px 12px;
   font-size: 11px;
   letter-spacing: 1px;
@@ -91,6 +91,7 @@ body {
   -webkit-backdrop-filter: blur(10px);
   pointer-events: none;
   user-select: none;
+  white-space: nowrap;
 }
 
 .hud-fps {
@@ -107,7 +108,9 @@ body {
   position: absolute;
   top: 20px;
   right: 20px;
-  width: 288px;
+  width: 292px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   z-index: 100;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
@@ -115,7 +118,6 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
 }
 
 .panel-head {
@@ -140,7 +142,7 @@ body {
   padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .panel.collapsed .panel-body {
@@ -171,6 +173,14 @@ body {
   color: var(--text-dim);
   opacity: 0.7;
   margin-bottom: 8px;
+}
+
+.hint-tip {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  opacity: 0.8;
 }
 
 /* 预设 */
@@ -208,6 +218,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 12px;
 }
 
 /* 滑杆 */
@@ -344,9 +355,9 @@ body {
   bottom: 52px;
   z-index: 100;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
-  max-width: 380px;
+  max-width: 400px;
   padding: 14px 16px;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
@@ -370,8 +381,9 @@ body {
 
 .planet-dot {
   flex: none;
-  width: 16px;
-  height: 16px;
+  margin-top: 3px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
 }
 
@@ -388,25 +400,55 @@ body {
 }
 
 .planet-card-sub {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 11px;
   opacity: 0.7;
+}
+
+/* 轨道参数 */
+.orbit-stats {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.orbit-stats b {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .planet-card .icon-btn {
   flex: none;
 }
 
-/* 行星悬浮标签 */
-.planet-label {
-  padding: 3px 10px;
+/* 行星 3D 悬浮标签 */
+.planet-tag {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 10px;
+  background: rgba(8, 11, 22, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
   font-size: 12px;
-  letter-spacing: 1px;
-  color: #fff;
-  background: rgba(10, 14, 28, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
   white-space: nowrap;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.planet-tag-name {
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.planet-tag-live {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 底部提示 */
@@ -449,6 +491,7 @@ body {
     bottom: 16px;
     left: 16px;
     right: 16px;
+    max-height: 45vh;
   }
 
   .title h1 {
@@ -460,7 +503,8 @@ body {
   }
 
   .planet-card {
-    bottom: 240px;
+    bottom: 120px;
+    max-width: calc(100% - 32px);
   }
 
   .hint {

@@ -4,20 +4,32 @@
 [![GitHub Pages](https://img.shields.io/badge/Pages-Live-6ea8ff?logo=githubpages)](https://xiaoqianran.github.io/r3f-nebula/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-6ea8ff)](LICENSE)
 
-基于 **React + Three.js（React Three Fiber）** 的交互式 3D 星系 Demo。程序化生成螺旋星系粒子，配合轨道行星与实时参数控制台。
+基于 **React + Three.js（React Three Fiber）** 的交互式 3D 星系，**行星采用真实开普勒轨道力学**，星系盘具备**差速旋转**。
 
-## 功能特性
+## 真实物理逻辑
 
-- 🌀 **程序化螺旋星系**：默认 9 万粒子，GLSL 顶点着色器实时驱动旋涡动画（additive 混合 + 软边缘光点）
-- 🪐 **轨道行星 + 相机聚焦**：四颗行星沿轨道公转（气态巨行星带冰粒光环），点击后相机平滑飞近并跟随，Esc / 关闭卡片返回总览
-- 🎛 **实时控制台**：粒子数量 / 大小 / 旋臂 / 扭曲 / 扩散 / 速度 / 双色渐变，参数即时生效（结构性参数自动防抖）
+行星不再是匀速圆周运动，而是**两体问题（点质量中心恒星）的精确解析解**：
+
+- **开普勒第一定律**：轨道为椭圆，中心恒星位于一个焦点。行星由轨道根数 `(a, e, i, Ω, ω, M₀)` 描述，轨道线按根数采样绘制（含偏心率与倾角）。
+- **开普勒第二定律**（面积速度守恒）：每帧解开普勒方程 `M = E − e·sinE`（牛顿迭代），位置随真实近/远点变化——**近日点快、远日点慢**。聚焦时 3D 标签用活力公式 `v = √(μ(2/r − 1/a))` 实时显示瞬时速度，可直观看到速度随 r 变化。
+- **开普勒第三定律**：轨道周期 `T = 2π√(a³/μ)`，由半长轴决定。拉高「时间流速」可看到外行星明显更慢。
+- **差速旋转**：星系粒子顶点着色器加入角速度 `∝ 1/√r` 的差速旋转——越靠内转得越快，符合真实旋盘的旋转曲线特征（可用面板开关）。
+
+> 这是自洽的玩具模型（统一 `μ=16`、场景单位为“AU”），用于清晰演示开普勒定律；如需真实太阳系参数，改 `lib/orbit.ts` 的 `MU` 与各行星根数即可。
+
+## 其他功能
+
+- 🌀 **程序化螺旋星系**：默认 9 万粒子，GLSL 顶点着色器驱动旋涡动画（additive 混合 + 软边缘光点）
+- 🪐 **轨道行星 + 相机聚焦**：点击行星相机平滑飞近并跟随其公转，Esc / 关闭卡片返回总览；气态巨行星带冰粒光环
+- 🎛 **实时控制台**：粒子数量/大小/旋臂/扭曲/扩散/速度/双色渐变，结构性参数自动防抖
 - 🎨 **预设风格 + 随机生成**：经典旋涡 / 烈焰双螺旋 / 多臂蓝星 / 混沌星云，一键 🎲
-- ✨ **Bloom 辉光后处理**（可开关）+ 背景星场 + 核心恒星脉动光晕
-- 📊 **性能监视 + 自动降质**：实时 FPS / 粒子数显示；持续低帧率时自动降低采样并提示
-- 💾 **设置持久化**：参数与开关自动保存到 localStorage，刷新后恢复
-- 🎥 **轨道相机**：拖拽旋转、滚轮缩放、可选自动环绕（drei `OrbitControls`）
+- ⏩ **时间流速**（0.1×–10×）：快进观察开普勒第三定律
+- ✨ **Bloom 辉光**（可开关）+ 背景星场 + 核心恒星脉动光晕
+- 📊 **性能监视 + 自动降质**：实时 FPS/粒子数；持续低帧率自动降采样
+- 💾 **设置持久化**：参数与开关存入 localStorage，刷新恢复
+- 🎥 **轨道相机**：拖拽旋转、滚轮缩放、可选自动环绕
 - 📸 **一键 PNG 截图** + 快捷键：`Space` 环绕 / `S` 截图 / `R` 重置 / `Esc` 返回总览
-- 📱 移动端适配的 UI 布局
+- 📱 移动端适配 UI
 
 ## 技术栈
 
@@ -56,30 +68,28 @@ https://<你的用户名>.github.io/r3f-nebula/
 
 ```
 src/
-├── App.tsx                 # 应用外壳：状态管理 + 快捷键 + 截图 + 持久化
+├── App.tsx                 # 应用外壳：状态 + 快捷键 + 截图 + 持久化 + 轨道参数卡
 ├── main.tsx                # 入口
 ├── styles.css              # 玻璃拟态 UI 样式
-├── types.ts                # 类型、默认值、预设、随机与持久化
+├── types.ts                # 类型、默认值、行星根数、预设、随机与持久化
 ├── lib/
-│   └── galaxy.ts           # 程序化生成星系几何体（position/color/aScale/aRandomness）
+│   ├── orbit.ts            # 开普勒两体轨道引擎（周期/方程/位置/速度/统计）
+│   └── galaxy.ts           # 程序化生成星系几何体
 └── components/
-    ├── Scene.tsx           # R3F Canvas：相机、灯光、星场、行星、CameraRig、PerfMonitor、Bloom
-    ├── Galaxy.tsx          # 粒子星系（自定义 ShaderMaterial + 几何体热替换）
-    └── ControlPanel.tsx    # 参数面板（预设 / 滑杆 / 颜色 / 开关）
+    ├── Scene.tsx           # R3F Canvas：SimClock/轨道线/开普勒行星/相机/性能/Bloom
+    ├── Galaxy.tsx          # 粒子星系（差速旋转 + 旋涡着色器 + 几何体热替换）
+    └── ControlPanel.tsx    # 参数面板（预设/滑杆/颜色/物理时间/开关）
 ```
 
-## 实现原理速览
+## 物理实现要点
 
-- **粒子分布**：`半径 = inner + √rand × (outer − inner)`（内密外疏），叠加旋臂角 `i % branches` 与螺旋角 `radius × spin`，再按幂次 `radius^randomnessPower` 施加随机扰动，得到真实的旋臂形态。
-- **颜色**：随半径由内向外 `lerpColors(insideColor, outsideColor)`，逐顶点写入 `color` 属性，着色器中通过 `vColor` 传递。
-- **动画**：顶点着色器里以到中心的距离为相位叠加 `sin/cos` 位移形成旋涡；`gl_PointSize` 按 `1 / 距离` 做透视缩放。时间、速度、尺寸均走 uniform，**无需重建几何体即可实时调节**。
-- **几何体热替换**：结构性参数（数量/旋臂/扭曲/扩散/颜色）变化时防抖 180ms 后 `useMemo` 重建 `BufferGeometry`，旧几何体在 effect 清理阶段 `dispose()` 释放 GPU 资源；大小/速度则直接更新 uniform。
-- **相机聚焦（CameraRig）**：行星 mesh 注册进共享 Map，聚焦时对 `OrbitControls.target` 做强 lerp 锁定 + 对相机距离做指数缓动，1.4s 内收敛到合适观察距离；解除后飞回总览位。
-- **自动降质（PerfMonitor）**：每 0.5s 统计一次 FPS；连续约 3s 低于 25fps 时调用 `setDpr(1)` 降低采样率并在 HUD 提示“性能模式”。
-- **设置持久化**：参数与开关防抖 300ms 写入 localStorage（带版本 key 与默认值兜底），启动时 `loadSettings()` 恢复。
+- **`lib/orbit.ts`**：`orbitalPeriod`(T=2π√(a³/μ)) → `meanMotion`(n=2π/T) → 每帧 `M = M₀ + n·t` → `solveKepler`(牛顿迭代求离心近点角 E) → 轨道面内坐标 → 经 `ω, i, Ω` 旋转到惯性系（Three.js Y 朝上，轨道面落在 XZ 平面）。
+- **共享时钟（SimClock）**：所有行星读同一仿真时间，乘以「时间流速」实现统一快进，相对运动始终符合物理。
+- **实时遥测**：仅对聚焦行星，在 `useFrame` 中直接写 DOM 文本（`r` 与 vis-viva 速度），避免每帧触发 React 重渲染。
+- **几何体热替换**：结构性参数防抖 180ms 后重建 `BufferGeometry`，旧几何体在 effect 清理阶段 `dispose()`。
 
 ## 自定义
 
 - 调 `src/types.ts` 的 `DEFAULT_GALAXY` 更换默认星系形态。
-- 改 `src/components/Galaxy.tsx` 里的两个 GLSL 着色器可做出更夸张的动画效果。
-- 在 `PLANETS` 数组里增删行星即可（加 `ring: true` 可获得光环），场景与 UI 会自动跟进。
+- 改 `lib/orbit.ts` 的 `MU` 与各行星轨道根数，可获得任意轨道（含真实太阳系尺度）。
+- 在 `PLANETS` 数组里增删行星即可（`ring: true` 获得光环），场景与 UI 自动跟进。
