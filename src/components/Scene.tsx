@@ -19,6 +19,8 @@ interface SceneProps {
   focusId: string | null
   selectedId: string | null
   onGlReady: (gl: THREE.WebGLRenderer) => void
+  onFps: (fps: number) => void
+  onLowPerf: () => void
   onSelectPlanet: (planet: PlanetDef) => void
 }
 
@@ -71,6 +73,37 @@ function CameraRig({ focusId, registry }: { focusId: string | null; registry: Re
       const t = 1 - Math.exp(-d * 4)
       controls.target.lerp(ORIGIN, t)
       camera.position.lerp(HOME_POS, t)
+    }
+  })
+
+  return null
+}
+
+/** 性能监视：每 0.5s 上报一次 FPS；持续低帧率时自动降低采样 */
+function PerfMonitor({ onFps, onLowPerf }: { onFps: (fps: number) => void; onLowPerf: () => void }) {
+  const setDpr = useThree((s) => s.setDpr)
+  const acc = useRef({ frames: 0, time: 0, lowStreak: 0, fired: false })
+
+  useFrame((_, delta) => {
+    const a = acc.current
+    a.frames += 1
+    a.time += Math.min(delta, 0.1)
+    if (a.time < 0.5) return
+    const fps = a.frames / a.time
+    a.frames = 0
+    a.time = 0
+    onFps(fps)
+    if (a.fired) return
+    if (fps < 25) {
+      a.lowStreak += 1
+      if (a.lowStreak >= 6) {
+        // 约 3s 持续 <25fps：降低采样率找回帧率
+        a.fired = true
+        setDpr(1)
+        onLowPerf()
+      }
+    } else {
+      a.lowStreak = 0
     }
   })
 
@@ -166,6 +199,19 @@ function Planet({
         roughness={0.35}
         metalness={0.15}
       />
+      {def.ring && (
+        <mesh rotation={[Math.PI / 2.6, 0.35, 0]}>
+          <ringGeometry args={[def.size * 1.45, def.size * 2.3, 64]} />
+          <meshBasicMaterial
+            color={def.color}
+            transparent
+            opacity={0.32}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
       {(hovered || selected) && (
         <Html
           center
@@ -207,6 +253,8 @@ export default function Scene({
   focusId,
   selectedId,
   onGlReady,
+  onFps,
+  onLowPerf,
   onSelectPlanet,
 }: SceneProps) {
   const registry = useRef(new Map<string, PlanetEntry>())
@@ -241,6 +289,7 @@ export default function Scene({
       ))}
 
       <CameraRig focusId={focusId} registry={registry} />
+      <PerfMonitor onFps={onFps} onLowPerf={onLowPerf} />
 
       <OrbitControls
         makeDefault

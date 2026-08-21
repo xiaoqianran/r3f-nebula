@@ -32,6 +32,9 @@ export const DEFAULT_GALAXY: GalaxyParams = {
   outsideColor: '#2743d8',
 }
 
+export const DEFAULT_SIZE = 60
+export const DEFAULT_SPEED = 1
+
 /** 行星定义 */
 export interface PlanetDef {
   id: string
@@ -44,6 +47,8 @@ export interface PlanetDef {
   speed: number
   /** 初始相位（弧度） */
   offset: number
+  /** 是否带光环（气态巨行星） */
+  ring?: boolean
 }
 
 export const PLANETS: PlanetDef[] = [
@@ -76,6 +81,7 @@ export const PLANETS: PlanetDef[] = [
     color: '#fde68a',
     speed: 0.24,
     offset: 4.2,
+    ring: true,
   },
   {
     id: 'xuanji',
@@ -159,5 +165,60 @@ export function randomGalaxyConfig(): { galaxy: GalaxyParams; size: number; spee
     },
     size: Math.round(r(40, 100)),
     speed: Math.round(r(0.4, 1.6) * 10) / 10,
+  }
+}
+
+/** 持久化设置 */
+export interface PersistedSettings {
+  galaxy: GalaxyParams
+  size: number
+  speed: number
+  autoRotate: boolean
+  showOrbits: boolean
+  bloom: boolean
+}
+
+const STORAGE_KEY = 'nebula-settings-v1'
+
+function clampNum(v: unknown, min: number, max: number, fallback: number): number {
+  return typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback
+}
+
+function asBool(v: unknown, fallback: boolean): boolean {
+  return typeof v === 'boolean' ? v : fallback
+}
+
+/** 读取持久化设置（带默认值兜底，兼容旧数据） */
+export function loadSettings(): PersistedSettings | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const p = JSON.parse(raw)
+    if (!p || typeof p !== 'object' || !p.galaxy || typeof p.galaxy !== 'object') return null
+    const g = p.galaxy as Partial<GalaxyParams>
+    return {
+      galaxy: {
+        ...DEFAULT_GALAXY,
+        ...g,
+        count: clampNum(g.count, 10000, 200000, DEFAULT_GALAXY.count),
+        branches: Math.round(clampNum(g.branches, 1, 8, DEFAULT_GALAXY.branches)),
+      },
+      size: clampNum(p.size, 10, 140, DEFAULT_SIZE),
+      speed: clampNum(p.speed, 0, 3, DEFAULT_SPEED),
+      autoRotate: asBool(p.autoRotate, true),
+      showOrbits: asBool(p.showOrbits, true),
+      bloom: asBool(p.bloom, true),
+    }
+  } catch {
+    return null
+  }
+}
+
+/** 保存持久化设置（存储不可用时静默忽略） */
+export function saveSettings(s: PersistedSettings): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
+  } catch {
+    // 隐私模式等场景下忽略
   }
 }
