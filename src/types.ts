@@ -88,3 +88,76 @@ export const PLANETS: PlanetDef[] = [
     offset: 5.8,
   },
 ]
+
+/** 预设风格：一键应用一组星系参数 */
+export interface Preset {
+  name: string
+  params: Partial<GalaxyParams>
+  size: number
+  speed: number
+}
+
+export const PRESETS: Preset[] = [
+  { name: '经典旋涡', params: {}, size: 60, speed: 1 },
+  {
+    name: '烈焰双螺旋',
+    params: {
+      branches: 2, spin: 1.6, randomness: 0.22, randomnessPower: 3,
+      count: 110000, insideColor: '#ffd166', outsideColor: '#ef4444',
+    },
+    size: 70,
+    speed: 1.3,
+  },
+  {
+    name: '多臂蓝星',
+    params: {
+      branches: 5, spin: 0.7, randomness: 0.5, outer: 13,
+      insideColor: '#fef08a', outsideColor: '#38bdf8',
+    },
+    size: 48,
+    speed: 0.9,
+  },
+  {
+    name: '混沌星云',
+    params: {
+      branches: 7, spin: 0.15, randomness: 0.85, randomnessPower: 1.6,
+      outer: 14, count: 130000, insideColor: '#f472b6', outsideColor: '#6366f1',
+    },
+    size: 80,
+    speed: 1.4,
+  },
+]
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100
+  l /= 100
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12
+    const c = l - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)))
+    return Math.round(255 * c).toString(16).padStart(2, '0')
+  }
+  return `#${f(0)}${f(8)}${f(4)}`
+}
+
+/** 随机生成一组星系配置 */
+export function randomGalaxyConfig(): { galaxy: GalaxyParams; size: number; speed: number } {
+  const r = (a: number, b: number) => a + Math.random() * (b - a)
+  const hex = () =>
+    hslToHex(Math.floor(r(0, 360)), Math.floor(r(55, 95)), Math.floor(r(45, 62)))
+  return {
+    galaxy: {
+      count: Math.round(r(50000, 160000) / 5000) * 5000,
+      inner: r(0.8, 2),
+      outer: r(8, 15),
+      branches: Math.floor(r(1, 8)),
+      spin: r(0, 2),
+      randomness: r(0.1, 0.8),
+      randomnessPower: r(1.5, 3.5),
+      insideColor: hex(),
+      outsideColor: hex(),
+    },
+    size: Math.round(r(40, 100)),
+    speed: Math.round(r(0.4, 1.6) * 10) / 10,
+  }
+}

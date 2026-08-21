@@ -5,17 +5,19 @@
 ## 功能特性
 
 - 🌀 **程序化螺旋星系**：默认 9 万粒子，GLSL 顶点着色器实时驱动旋涡动画（additive 混合 + 软边缘光点）
-- 🪐 **轨道行星**：四颗行星沿轨道公转，点击可查看资料卡片
-- 🎛 **实时控制台**：粒子数量 / 大小 / 旋臂 / 扭曲 / 扩散 / 速度 / 双色渐变，参数即时生效
+- 🪐 **轨道行星 + 相机聚焦**：四颗行星沿轨道公转，点击后相机平滑飞近并跟随，Esc / 关闭卡片返回总览
+- 🎛 **实时控制台**：粒子数量 / 大小 / 旋臂 / 扭曲 / 扩散 / 速度 / 双色渐变，参数即时生效（结构性参数自动防抖）
+- 🎨 **预设风格 + 随机生成**：经典旋涡 / 烈焰双螺旋 / 多臂蓝星 / 混沌星云，一键 🎲
+- ✨ **Bloom 辉光后处理**（可开关）+ 背景星场 + 核心恒星脉动光晕
 - 🎥 **轨道相机**：拖拽旋转、滚轮缩放、可选自动环绕（drei `OrbitControls`）
-- ✨ **背景星场** + 核心恒星脉动光晕
+- 📸 **一键 PNG 截图** + 快捷键：`Space` 环绕 / `S` 截图 / `R` 重置 / `Esc` 返回总览
 - 📱 移动端适配的 UI 布局
 
 ## 技术栈
 
 - React 18 + TypeScript
 - Vite 5
-- three / @react-three/fiber / @react-three/drei
+- three / @react-three/fiber / @react-three/drei / @react-three/postprocessing
 
 ## 快速开始
 
@@ -48,16 +50,16 @@ https://<你的用户名>.github.io/r3f-nebula/
 
 ```
 src/
-├── App.tsx                 # 应用外壳：状态管理 + UI 布局
+├── App.tsx                 # 应用外壳：状态管理 + 快捷键 + 截图
 ├── main.tsx                # 入口
 ├── styles.css              # 玻璃拟态 UI 样式
-├── types.ts                # GalaxyParams / PlanetDef 类型与默认值
+├── types.ts                # 类型、默认值、预设与随机配置
 ├── lib/
 │   └── galaxy.ts           # 程序化生成星系几何体（position/color/aScale/aRandomness）
 └── components/
-    ├── Scene.tsx           # R3F Canvas：相机、灯光、星场、行星、轨道线
+    ├── Scene.tsx           # R3F Canvas：相机、灯光、星场、行星、CameraRig、Bloom
     ├── Galaxy.tsx          # 粒子星系（自定义 ShaderMaterial + 几何体热替换）
-    └── ControlPanel.tsx    # 参数面板（滑杆 / 颜色 / 开关）
+    └── ControlPanel.tsx    # 参数面板（预设 / 滑杆 / 颜色 / 开关）
 ```
 
 ## 实现原理速览
@@ -65,7 +67,8 @@ src/
 - **粒子分布**：`半径 = inner + √rand × (outer − inner)`（内密外疏），叠加旋臂角 `i % branches` 与螺旋角 `radius × spin`，再按幂次 `radius^randomnessPower` 施加随机扰动，得到真实的旋臂形态。
 - **颜色**：随半径由内向外 `lerpColors(insideColor, outsideColor)`，逐顶点写入 `color` 属性，着色器中通过 `vColor` 传递。
 - **动画**：顶点着色器里以到中心的距离为相位叠加 `sin/cos` 位移形成旋涡；`gl_PointSize` 按 `1 / 距离` 做透视缩放。时间、速度、尺寸均走 uniform，**无需重建几何体即可实时调节**。
-- **几何体热替换**：结构性参数（数量/旋臂/扭曲/扩散/颜色）变化时 `useMemo` 重建 `BufferGeometry`，旧几何体在 effect 清理阶段 `dispose()` 释放 GPU 资源；大小/速度则直接更新 uniform。
+- **几何体热替换**：结构性参数（数量/旋臂/扭曲/扩散/颜色）变化时防抖 180ms 后 `useMemo` 重建 `BufferGeometry`，旧几何体在 effect 清理阶段 `dispose()` 释放 GPU 资源；大小/速度则直接更新 uniform。
+- **相机聚焦（CameraRig）**：行星 mesh 注册进共享 Map，聚焦时对 `OrbitControls.target` 做强 lerp 锁定 + 对相机距离做指数缓动，1.4s 内收敛到合适观察距离；解除后飞回总览位。
 
 ## 自定义
 

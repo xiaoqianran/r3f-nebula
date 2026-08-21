@@ -42,6 +42,7 @@ body {
   position: absolute;
   top: 22px;
   left: 24px;
+  z-index: 100;
   pointer-events: none;
   user-select: none;
 }
@@ -76,6 +77,7 @@ body {
   top: 20px;
   right: 20px;
   width: 288px;
+  z-index: 100;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 16px;
@@ -107,7 +109,7 @@ body {
   padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .panel.collapsed .panel-body {
@@ -130,6 +132,51 @@ body {
 .icon-btn:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.12);
+}
+
+.section-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+/* 预设 */
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-chip {
+  padding: 5px 10px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-chip:hover {
+  color: var(--text);
+  border-color: rgba(110, 168, 255, 0.5);
+  background: rgba(110, 168, 255, 0.12);
+}
+
+.slider-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.color-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* 滑杆 */
@@ -216,7 +263,6 @@ body {
 .switch-row {
   display: flex;
   gap: 14px;
-  margin-top: 2px;
 }
 
 .switch {
@@ -236,21 +282,26 @@ body {
   cursor: pointer;
 }
 
-/* 重置 */
-.reset-btn {
-  margin-top: 4px;
+/* 按钮 */
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  flex: 1;
   padding: 9px 0;
   border: 1px solid rgba(110, 168, 255, 0.35);
   border-radius: 10px;
   background: rgba(110, 168, 255, 0.1);
   color: var(--accent);
   font-size: 13px;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.reset-btn:hover {
+.action-btn:hover {
   background: rgba(110, 168, 255, 0.22);
 }
 
@@ -259,6 +310,7 @@ body {
   position: absolute;
   left: 24px;
   bottom: 52px;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -303,8 +355,26 @@ body {
   color: var(--text-dim);
 }
 
+.planet-card-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
 .planet-card .icon-btn {
   flex: none;
+}
+
+/* 行星悬浮标签 */
+.planet-label {
+  padding: 3px 10px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #fff;
+  background: rgba(10, 14, 28, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 /* 底部提示 */
@@ -337,7 +407,7 @@ body {
   }
 
   .planet-card {
-    bottom: 220px;
+    bottom: 240px;
   }
 
   .hint {
