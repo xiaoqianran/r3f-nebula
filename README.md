@@ -6,7 +6,7 @@
 
 - 🌀 **程序化螺旋星系**：默认 9 万粒子，GLSL 顶点着色器实时驱动旋涡动画（additive 混合 + 软边缘光点）
 - 🪐 **轨道行星**：四颗行星沿轨道公转，点击可查看资料卡片
-- 🎛 **实时控制台**：粒子数量 / 大小 / 旋臂数 / 螺旋扭曲 / 随机扩散 / 动态速度 / 双色渐变，参数即时生效
+- 🎛 **实时控制台**：粒子数量 / 大小 / 旋臂 / 扭曲 / 扩散 / 速度 / 双色渐变，参数即时生效
 - 🎥 **轨道相机**：拖拽旋转、滚轮缩放、可选自动环绕（drei `OrbitControls`）
 - ✨ **背景星场** + 核心恒星脉动光晕
 - 📱 移动端适配的 UI 布局
@@ -25,6 +25,24 @@ npm run dev       # 本地开发，默认 http://localhost:5173
 npm run build     # 类型检查 + 构建，产物在 dist/
 npm run preview   # 预览构建产物
 ```
+
+## 部署到 GitHub Pages
+
+本项目内置 GitHub Actions 工作流（`.github/workflows/deploy.yml`），**每次推送到 `main` 分支都会自动构建并部署**。
+
+**首次使用需手动开启一次**（即“让 Pages 指向 Actions”）：
+
+1. 进入仓库 **Settings → Pages**
+2. **Build and deployment** → **Source** 选择 **GitHub Actions**
+3. 保存
+
+之后每次 push 到 `main`（或在 Actions 页手动运行 *Deploy to GitHub Pages*）即可自动更新站点：
+
+```
+https://<你的用户名>.github.io/r3f-nebula/
+```
+
+> 说明：`vite.config.ts` 里设置了 `base: './'`（相对路径），因此无需在构建时写死仓库名，产物即可在 Pages 的子路径下正常加载静态资源。
 
 ## 目录结构
 
