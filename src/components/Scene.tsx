@@ -23,7 +23,6 @@ interface SceneProps {
   showOrbits: boolean
   bloom: boolean
   focusId: string | null
-  selectedId: string | null
   onGlReady: (gl: THREE.WebGLRenderer) => void
   onFps: (fps: number) => void
   onLowPerf: () => void
@@ -278,7 +277,6 @@ export default function Scene({
   showOrbits,
   bloom,
   focusId,
-  selectedId,
   onGlReady,
   onFps,
   onLowPerf,

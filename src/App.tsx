@@ -131,7 +131,6 @@ export default function App() {
         showOrbits={showOrbits}
         bloom={bloom}
         focusId={focusId}
-        selectedId={selected?.id ?? null}
         onGlReady={(gl) => {
           glRef.current = gl
         }}
