@@ -9,6 +9,7 @@ const vertexShader = /* glsl */ `
   uniform float uSize;
   uniform float uPixelRatio;
   uniform float uSpeed;
+  uniform float uDiffer;
 
   varying vec3 vColor;
 
@@ -17,23 +18,28 @@ const vertexShader = /* glsl */ `
 
   void main() {
     vec4 modelPosition = modelMatrix * vec4(position, 1.0);
-    float distanceFromCenter = length(modelPosition.xy);
 
-    // 微粒抖动
+    // 开普勒差速旋转：角速度 ∝ 1/sqrt(r)，越靠内转得越快（真实旋盘的差速特征）
+    float r = length(modelPosition.xz);
+    if (uDiffer > 0.0001 && r > 0.001) {
+      float ang = atan(modelPosition.z, modelPosition.x);
+      ang += uTime * uDiffer * 0.5 / sqrt(r);
+      modelPosition.x = cos(ang) * r;
+      modelPosition.z = sin(ang) * r;
+    }
+
     modelPosition.xyz += aRandomness;
 
-    // 随时间起伏的旋涡
-    float swirl = uSpeed * 0.4;
-    modelPosition.x += sin(uTime * 0.6 + distanceFromCenter * 1.4) * swirl;
-    modelPosition.z += cos(uTime * 0.5 + distanceFromCenter * 1.4) * swirl;
-    modelPosition.y += sin(uTime * 0.35 + distanceFromCenter * 0.8) * swirl * 0.35;
+    // 旋涡呼吸（保留原有动态）
+    float d = length(modelPosition.xz);
+    float swirl = uSpeed * 0.35;
+    modelPosition.x += sin(uTime * 0.6 + d * 1.4) * swirl * 0.35;
+    modelPosition.z += cos(uTime * 0.5 + d * 1.4) * swirl * 0.35;
+    modelPosition.y += sin(uTime * 0.35 + d * 0.8) * swirl * 0.35;
 
     gl_Position = projectionMatrix * modelViewMatrix * modelPosition;
-
-    // 距离透视缩放
     gl_PointSize = uSize * aScale * uPixelRatio;
     gl_PointSize *= (1.0 / -modelViewMatrix.z);
-
     vColor = color;
   }
 `
@@ -57,9 +63,11 @@ interface GalaxyProps {
   size: number
   /** 动态速度（uniform，实时生效） */
   speed: number
+  /** 差速旋转强度（0 关 / 1 开） */
+  differ: number
 }
 
-export default function Galaxy({ params, size, speed }: GalaxyProps) {
+export default function Galaxy({ params, size, speed, differ }: GalaxyProps) {
   const pointsRef = useRef<THREE.Points>(null)
 
   // 参数变化时重新生成几何体
@@ -79,6 +87,7 @@ export default function Galaxy({ params, size, speed }: GalaxyProps) {
           uTime: { value: 0 },
           uSize: { value: size },
           uSpeed: { value: speed },
+          uDiffer: { value: differ },
           uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
         },
       }),
@@ -100,10 +109,13 @@ export default function Galaxy({ params, size, speed }: GalaxyProps) {
     material.uniforms.uSpeed.value = speed
   }, [speed, material])
 
+  useEffect(() => {
+    material.uniforms.uDiffer.value = differ
+  }, [differ, material])
+
   useFrame((_, delta) => {
-    const u = material.uniforms
-    u.uTime.value += delta * (0.25 + 0.75 * u.uSpeed.value)
-    if (pointsRef.current) pointsRef.current.rotation.y += delta * 0.02
+    material.uniforms.uTime.value += delta * (0.25 + 0.75 * material.uniforms.uSpeed.value)
+    if (pointsRef.current) pointsRef.current.rotation.y += delta * 0.015
   })
 
   return (

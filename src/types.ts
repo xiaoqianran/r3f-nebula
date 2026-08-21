@@ -1,3 +1,5 @@
+import type { OrbitElements } from './lib/orbit'
+
 /** 星云几何参数（改变时会重新生成粒子几何体） */
 export interface GalaxyParams {
   /** 粒子数量 */
@@ -35,18 +37,13 @@ export const DEFAULT_GALAXY: GalaxyParams = {
 export const DEFAULT_SIZE = 60
 export const DEFAULT_SPEED = 1
 
-/** 行星定义 */
-export interface PlanetDef {
+/** 行星定义：继承开普勒轨道根数 + 展示属性 */
+export interface PlanetDef extends OrbitElements {
   id: string
   name: string
   desc: string
-  orbitRadius: number
-  size: number
   color: string
-  /** 角速度（弧度/秒） */
-  speed: number
-  /** 初始相位（弧度） */
-  offset: number
+  size: number
   /** 是否带光环（气态巨行星） */
   ring?: boolean
 }
@@ -55,43 +52,39 @@ export const PLANETS: PlanetDef[] = [
   {
     id: 'linghu',
     name: '灵狐 · Linghu',
-    desc: '最靠近核心恒星的炽热岩质行星，表面熔岩遍布，公转周期最短。',
-    orbitRadius: 3.4,
-    size: 0.17,
+    desc: '最靠近核心恒星的炽热岩质行星，公转最快——开普勒第三定律的直观体现。',
     color: '#fca5a5',
-    speed: 0.55,
-    offset: 0.6,
+    size: 0.17,
+    a: 3.4, e: 0.06, inclination: 0.04,
+    longitudeOfAscendingNode: 0.0, argumentOfPeriapsis: 0.5, meanAnomalyAtEpoch: 0.6,
   },
   {
     id: 'yueying',
     name: '月萤 · Yueying',
-    desc: '拥有冰蓝大气层的类地行星，云层间闪烁着永夜城市的微光。',
-    orbitRadius: 5.8,
-    size: 0.26,
+    desc: '拥有冰蓝大气层的类地行星，轨道近乎正圆。',
     color: '#7dd3fc',
-    speed: 0.38,
-    offset: 2.4,
+    size: 0.26,
+    a: 5.8, e: 0.05, inclination: 0.03,
+    longitudeOfAscendingNode: 0.9, argumentOfPeriapsis: 1.3, meanAnomalyAtEpoch: 2.4,
   },
   {
     id: 'jinshu',
     name: '金枢 · Jinshu',
-    desc: '体积最大的气态巨行星，风暴带昼夜不息，光环由上亿颗冰粒构成。',
-    orbitRadius: 8.6,
-    size: 0.42,
+    desc: '体积最大的气态巨行星，带冰粒光环；掠过近日点时明显加速（面积速度守恒）。',
     color: '#fde68a',
-    speed: 0.24,
-    offset: 4.2,
+    size: 0.42,
     ring: true,
+    a: 8.6, e: 0.12, inclination: 0.07,
+    longitudeOfAscendingNode: 1.6, argumentOfPeriapsis: 2.1, meanAnomalyAtEpoch: 4.2,
   },
   {
     id: 'xuanji',
     name: '玄机 · Xuanji',
-    desc: '轨道最外侧的暗色冰巨星，极光在永夜的天幕上缓慢流动。',
-    orbitRadius: 12.4,
-    size: 0.3,
+    desc: '轨道最外侧、偏心率最大的冰巨星——近日点与远日点的速度差最为剧烈。',
     color: '#c4b5fd',
-    speed: 0.16,
-    offset: 5.8,
+    size: 0.3,
+    a: 12.4, e: 0.19, inclination: 0.1,
+    longitudeOfAscendingNode: 2.5, argumentOfPeriapsis: 0.8, meanAnomalyAtEpoch: 5.6,
   },
 ]
 
@@ -149,8 +142,7 @@ function hslToHex(h: number, s: number, l: number): string {
 /** 随机生成一组星系配置 */
 export function randomGalaxyConfig(): { galaxy: GalaxyParams; size: number; speed: number } {
   const r = (a: number, b: number) => a + Math.random() * (b - a)
-  const hex = () =>
-    hslToHex(Math.floor(r(0, 360)), Math.floor(r(55, 95)), Math.floor(r(45, 62)))
+  const hex = () => hslToHex(Math.floor(r(0, 360)), Math.floor(r(55, 95)), Math.floor(r(45, 62)))
   return {
     galaxy: {
       count: Math.round(r(50000, 160000) / 5000) * 5000,
@@ -173,6 +165,8 @@ export interface PersistedSettings {
   galaxy: GalaxyParams
   size: number
   speed: number
+  timeScale: number
+  differ: boolean
   autoRotate: boolean
   showOrbits: boolean
   bloom: boolean
@@ -205,6 +199,8 @@ export function loadSettings(): PersistedSettings | null {
       },
       size: clampNum(p.size, 10, 140, DEFAULT_SIZE),
       speed: clampNum(p.speed, 0, 3, DEFAULT_SPEED),
+      timeScale: clampNum(p.timeScale, 0.1, 10, 1),
+      differ: asBool(p.differ, true),
       autoRotate: asBool(p.autoRotate, true),
       showOrbits: asBool(p.showOrbits, true),
       bloom: asBool(p.bloom, true),
@@ -219,6 +215,6 @@ export function saveSettings(s: PersistedSettings): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
   } catch {
-    // 隐私模式等场景下忽略
+    /* 隐私模式等场景下忽略 */
   }
 }
