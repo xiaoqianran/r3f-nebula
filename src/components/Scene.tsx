@@ -1,18 +1,24 @@
-import { useEffect, useRef, useState, type MutableRefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import * as THREE from 'three'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Html, OrbitControls, Stars } from '@react-three/drei'
+import { Html, Line, OrbitControls, Stars } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import Galaxy from './Galaxy'
+import { MU, orbitalPeriod, positionAtTime, speedAtRadius, type OrbitElements } from '../lib/orbit'
 import { PLANETS, type GalaxyParams, type PlanetDef } from '../types'
 
 export type PlanetEntry = { mesh: THREE.Mesh; def: PlanetDef }
 type Registry = MutableRefObject<Map<string, PlanetEntry>>
+type TimeRef = MutableRefObject<{ t: number }>
 
 interface SceneProps {
   galaxy: GalaxyParams
   size: number
   speed: number
+  /** 时间流速（快进系数） */
+  timeScale: number
+  /** 星系差速旋转强度（0/1） */
+  differ: number
   autoRotate: boolean
   showOrbits: boolean
   bloom: boolean
@@ -30,6 +36,14 @@ const _dir = new THREE.Vector3()
 
 interface OrbitControlsLike {
   target: THREE.Vector3
+}
+
+/** 共享仿真时钟：所有行星共用同一时间轴，可快进 */
+function SimClock({ timeRef, timeScale }: { timeRef: TimeRef; timeScale: number }) {
+  useFrame((_, delta) => {
+    timeRef.current.t += Math.min(delta, 0.1) * timeScale
+  })
+  return null
 }
 
 /** 相机调度：聚焦行星时平滑飞近并跟随，解除时飞回总览视角 */
@@ -56,7 +70,7 @@ function CameraRig({ focusId, registry }: { focusId: string | null; registry: Re
       if (!entry) return
       const p = entry.mesh.position
       focusClock.current += d
-      // 目标点强锁定，行星始终居中
+      // 目标点强锁定，行星始终居中（仍可自由拖拽环绕）
       controls.target.lerp(p, 1 - Math.exp(-d * 10))
       // 前 ~1.4s 平滑调整到合适观察距离
       if (focusClock.current < 1.4) {
@@ -79,7 +93,7 @@ function CameraRig({ focusId, registry }: { focusId: string | null; registry: Re
   return null
 }
 
-/** 性能监视：每 0.5s 上报一次 FPS；持续低帧率时自动降低采样 */
+/** 性能监视：每 0.5s 上报 FPS；持续低帧率时自动降低采样 */
 function PerfMonitor({ onFps, onLowPerf }: { onFps: (fps: number) => void; onLowPerf: () => void }) {
   const setDpr = useThree((s) => s.setDpr)
   const acc = useRef({ frames: 0, time: 0, lowStreak: 0, fired: false })
@@ -97,7 +111,6 @@ function PerfMonitor({ onFps, onLowPerf }: { onFps: (fps: number) => void; onLow
     if (fps < 25) {
       a.lowStreak += 1
       if (a.lowStreak >= 6) {
-        // 约 3s 持续 <25fps：降低采样率找回帧率
         a.fired = true
         setDpr(1)
         onLowPerf()
@@ -108,6 +121,22 @@ function PerfMonitor({ onFps, onLowPerf }: { onFps: (fps: number) => void; onLow
   })
 
   return null
+}
+
+/** 按轨道根数采样，绘制真实椭圆轨道（含偏心率与倾角） */
+function OrbitPath({ el, color }: { el: OrbitElements; color: string }) {
+  const points = useMemo(() => {
+    const T = orbitalPeriod(el.a, MU)
+    const N = 220
+    const arr: [number, number, number][] = []
+    for (let i = 0; i <= N; i++) {
+      const p = positionAtTime(el, (i / N) * T)
+      arr.push([p.x, p.y, p.z])
+    }
+    return arr
+  }, [el])
+
+  return <Line points={points} color={color} lineWidth={1.1} transparent opacity={0.4} />
 }
 
 /** 核心恒星：脉动的光球 */
@@ -140,20 +169,22 @@ function Core() {
   )
 }
 
-/** 轨道行星：公转 + 悬浮标签 + 点击聚焦 */
+/** 轨道行星：开普勒运动 + 悬浮标签（聚焦时含实时遥测）+ 点击聚焦 */
 function Planet({
   def,
-  selected,
+  isFocused,
+  timeRef,
   registry,
   onSelect,
 }: {
   def: PlanetDef
-  selected: boolean
+  isFocused: boolean
+  timeRef: TimeRef
   registry: Registry
   onSelect: (p: PlanetDef) => void
 }) {
   const mesh = useRef<THREE.Mesh>(null)
-  const angle = useRef(def.offset)
+  const liveRef = useRef<HTMLSpanElement>(null)
   const [hovered, setHovered] = useState(false)
 
   useEffect(() => {
@@ -163,15 +194,17 @@ function Planet({
     }
   }, [def, registry])
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     const m = mesh.current
     if (!m) return
-    angle.current += delta * def.speed
-    m.position.set(
-      Math.cos(angle.current) * def.orbitRadius,
-      Math.sin(angle.current * 2.3) * 0.15,
-      Math.sin(angle.current) * def.orbitRadius,
-    )
+    // 两体问题精确解：椭圆轨道、近日快/远日慢、周期满足第三定律
+    positionAtTime(def, timeRef.current.t, m.position)
+
+    if (isFocused && liveRef.current) {
+      const r = m.position.length()
+      const v = speedAtRadius(r, def.a, MU)
+      liveRef.current.textContent = `距星 ${r.toFixed(2)} AU · 速度 ${v.toFixed(3)} AU/s`
+    }
   })
 
   return (
@@ -195,12 +228,12 @@ function Planet({
       <meshStandardMaterial
         color={def.color}
         emissive={def.color}
-        emissiveIntensity={selected ? 1.1 : hovered ? 0.6 : 0.25}
+        emissiveIntensity={isFocused ? 1.1 : hovered ? 0.6 : 0.25}
         roughness={0.35}
         metalness={0.15}
       />
       {def.ring && (
-        <mesh rotation={[Math.PI / 2.6, 0.35, 0]}>
+        <mesh rotation={[Math.PI / 2.6, 0.3, 0]}>
           <ringGeometry args={[def.size * 1.45, def.size * 2.3, 64]} />
           <meshBasicMaterial
             color={def.color}
@@ -212,33 +245,25 @@ function Planet({
           />
         </mesh>
       )}
-      {(hovered || selected) && (
+      {(hovered || isFocused) && (
         <Html
           center
-          position={[0, def.size + 0.45, 0]}
+          position={[0, def.size + 0.55, 0]}
           zIndexRange={[40, 0]}
           style={{ pointerEvents: 'none' }}
         >
-          <div className="planet-label">{def.name}</div>
+          <div className="planet-tag">
+            <span className="planet-tag-name" style={{ color: def.color }}>
+              {def.name}
+            </span>
+            {isFocused && (
+              <span className="planet-tag-live" ref={liveRef}>
+                —
+              </span>
+            )}
+          </div>
         </Html>
       )}
-    </mesh>
-  )
-}
-
-/** 轨道线 */
-function OrbitRing({ def }: { def: PlanetDef }) {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[def.orbitRadius - 0.015, def.orbitRadius + 0.015, 160]} />
-      <meshBasicMaterial
-        color={def.color}
-        transparent
-        opacity={0.22}
-        side={THREE.DoubleSide}
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
-      />
     </mesh>
   )
 }
@@ -247,6 +272,8 @@ export default function Scene({
   galaxy,
   size,
   speed,
+  timeScale,
+  differ,
   autoRotate,
   showOrbits,
   bloom,
@@ -258,6 +285,7 @@ export default function Scene({
   onSelectPlanet,
 }: SceneProps) {
   const registry = useRef(new Map<string, PlanetEntry>())
+  const timeRef = useRef({ t: 0 })
 
   return (
     <Canvas
@@ -272,25 +300,28 @@ export default function Scene({
       <fog attach="fog" args={['#04050d', 35, 110]} />
       <ambientLight intensity={0.45} />
 
+      {/* 共享时钟先于行星挂载，保证每帧先推进时间 */}
+      <SimClock timeRef={timeRef} timeScale={timeScale} />
+      <PerfMonitor onFps={onFps} onLowPerf={onLowPerf} />
+
       <Stars radius={80} depth={60} count={5000} factor={4} saturation={0} fade speed={0.6} />
 
-      <Galaxy params={galaxy} size={size} speed={speed} />
+      <Galaxy params={galaxy} size={size} speed={speed} differ={differ} />
       <Core />
 
-      {showOrbits && PLANETS.map((p) => <OrbitRing key={p.id} def={p} />)}
+      {showOrbits && PLANETS.map((p) => <OrbitPath key={p.id} el={p} color={p.color} />)}
       {PLANETS.map((p) => (
         <Planet
           key={p.id}
           def={p}
-          selected={p.id === selectedId}
+          isFocused={p.id === focusId}
+          timeRef={timeRef}
           registry={registry}
           onSelect={onSelectPlanet}
         />
       ))}
 
       <CameraRig focusId={focusId} registry={registry} />
-      <PerfMonitor onFps={onFps} onLowPerf={onLowPerf} />
-
       <OrbitControls
         makeDefault
         enablePan={false}

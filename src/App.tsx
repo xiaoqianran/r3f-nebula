@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import Scene from './components/Scene'
 import ControlPanel from './components/ControlPanel'
+import { orbitStats } from './lib/orbit'
 import {
   DEFAULT_GALAXY,
   DEFAULT_SIZE,
@@ -21,6 +22,8 @@ export default function App() {
   const [galaxy, setGalaxy] = useState<GalaxyParams>(persisted?.galaxy ?? DEFAULT_GALAXY)
   const [size, setSize] = useState(persisted?.size ?? DEFAULT_SIZE)
   const [speed, setSpeed] = useState(persisted?.speed ?? DEFAULT_SPEED)
+  const [timeScale, setTimeScale] = useState(persisted?.timeScale ?? 1)
+  const [differ, setDiffer] = useState(persisted?.differ ?? true)
   const [autoRotate, setAutoRotate] = useState(persisted?.autoRotate ?? true)
   const [showOrbits, setShowOrbits] = useState(persisted?.showOrbits ?? true)
   const [bloom, setBloom] = useState(persisted?.bloom ?? true)
@@ -42,10 +45,10 @@ export default function App() {
   // 设置持久化：防抖写入 localStorage
   useEffect(() => {
     const t = setTimeout(() => {
-      saveSettings({ galaxy: applied, size, speed, autoRotate, showOrbits, bloom })
+      saveSettings({ galaxy: applied, size, speed, timeScale, differ, autoRotate, showOrbits, bloom })
     }, 300)
     return () => clearTimeout(t)
-  }, [applied, size, speed, autoRotate, showOrbits, bloom])
+  }, [applied, size, speed, timeScale, differ, autoRotate, showOrbits, bloom])
 
   const handleGalaxyChange = useCallback((patch: Partial<GalaxyParams>) => {
     setGalaxy((prev) => ({ ...prev, ...patch }))
@@ -55,6 +58,8 @@ export default function App() {
     setGalaxy(DEFAULT_GALAXY)
     setSize(DEFAULT_SIZE)
     setSpeed(DEFAULT_SPEED)
+    setTimeScale(1)
+    setDiffer(true)
     setSelected(null)
     setFocusId(null)
   }, [])
@@ -120,6 +125,8 @@ export default function App() {
         galaxy={applied}
         size={size}
         speed={speed}
+        timeScale={timeScale}
+        differ={differ ? 1 : 0}
         autoRotate={autoRotate}
         showOrbits={showOrbits}
         bloom={bloom}
@@ -137,14 +144,15 @@ export default function App() {
         <h1>
           <em>NEBULA</em> 星云漫游
         </h1>
-        <p>React 18 · React Three Fiber · Three.js</p>
+        <p>开普勒轨道 · 差速旋转 · React + Three.js</p>
       </header>
 
       {showHud && (
         <div className="hud">
           <span className="hud-fps">FPS {Math.round(fps)}</span>
           <span>{(applied.count / 1000).toFixed(0)}k 粒子</span>
-          {autoQuality && <span className="hud-warn">性能模式 dpr=1</span>}
+          <span>μ=16 · 两体开普勒</span>
+          {autoQuality && <span className="hud-warn">性能模式</span>}
         </div>
       )}
 
@@ -155,6 +163,10 @@ export default function App() {
         onSizeChange={setSize}
         speed={speed}
         onSpeedChange={setSpeed}
+        timeScale={timeScale}
+        onTimeScaleChange={setTimeScale}
+        differ={differ}
+        onDifferChange={setDiffer}
         autoRotate={autoRotate}
         onAutoRotateChange={setAutoRotate}
         showOrbits={showOrbits}
@@ -171,25 +183,36 @@ export default function App() {
         onToggleCollapse={() => setCollapsed((c) => !c)}
       />
 
-      {selected && (
-        <section className="planet-card">
-          <span
-            className="planet-dot"
-            style={{ background: selected.color, boxShadow: `0 0 18px ${selected.color}` }}
-          />
-          <div className="planet-card-text">
-            <h3>{selected.name}</h3>
-            <p>{selected.desc}</p>
-            <p className="planet-card-sub">相机已跟随 · 按 Esc 或关闭返回总览</p>
-          </div>
-          <button className="icon-btn" onClick={exitFocus} aria-label="关闭并返回总览">
-            ×
-          </button>
-        </section>
-      )}
+      {selected && (() => {
+        const s = orbitStats(selected)
+        return (
+          <section className="planet-card">
+            <span
+              className="planet-dot"
+              style={{ background: selected.color, boxShadow: `0 0 18px ${selected.color}` }}
+            />
+            <div className="planet-card-text">
+              <h3>{selected.name}</h3>
+              <p>{selected.desc}</p>
+              <div className="orbit-stats">
+                <span>周期 <b>{s.period.toFixed(1)} s</b></span>
+                <span>半长轴 <b>{selected.a.toFixed(1)} AU</b></span>
+                <span>偏心率 <b>{selected.e.toFixed(2)}</b></span>
+                <span>倾角 <b>{s.inclinationDeg.toFixed(1)}°</b></span>
+                <span>近日点 <b>{s.perihelion.toFixed(1)} AU</b></span>
+                <span>远日点 <b>{s.aphelion.toFixed(1)} AU</b></span>
+              </div>
+              <p className="planet-card-sub">实时距离 / 速度见 3D 标签 · 按 Esc 返回总览</p>
+            </div>
+            <button className="icon-btn" onClick={exitFocus} aria-label="关闭并返回总览">
+              ×
+            </button>
+          </section>
+        )
+      })()}
 
       <footer className="hint">
-        拖拽旋转 · 滚轮缩放 · 点击行星聚焦 · Esc 返回 · Space 环绕 · S 截图 · R 重置
+        拖拽旋转 · 滚轮缩放 · 点击行星聚焦 · 拉高时间流速看开普勒第三定律 · Esc 返回
       </footer>
 
       <div className="fade-in" aria-hidden="true" />

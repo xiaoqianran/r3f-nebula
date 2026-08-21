@@ -54,6 +54,10 @@ interface ControlPanelProps {
   onSizeChange: (v: number) => void
   speed: number
   onSpeedChange: (v: number) => void
+  timeScale: number
+  onTimeScaleChange: (v: number) => void
+  differ: boolean
+  onDifferChange: (v: boolean) => void
   autoRotate: boolean
   onAutoRotateChange: (v: boolean) => void
   showOrbits: boolean
@@ -77,6 +81,10 @@ export default function ControlPanel({
   onSizeChange,
   speed,
   onSpeedChange,
+  timeScale,
+  onTimeScaleChange,
+  differ,
+  onDifferChange,
   autoRotate,
   onAutoRotateChange,
   showOrbits,
@@ -117,7 +125,7 @@ export default function ControlPanel({
         </div>
 
         <div>
-          <div className="section-label">星系参数</div>
+          <div className="section-label">星系形态</div>
           <div className="slider-stack">
             <Slider
               label="粒子数量"
@@ -165,10 +173,6 @@ export default function ControlPanel({
               format={(v) => `${v.toFixed(1)}x`}
             />
           </div>
-        </div>
-
-        <div>
-          <div className="section-label">颜色</div>
           <div className="color-stack">
             <ColorRow
               label="内侧颜色"
@@ -181,6 +185,28 @@ export default function ControlPanel({
               onChange={(v) => onGalaxyChange({ outsideColor: v })}
             />
           </div>
+        </div>
+
+        <div>
+          <div className="section-label">物理 · 时间</div>
+          <Slider
+            label="时间流速（快进）"
+            min={0.1}
+            max={10}
+            step={0.1}
+            value={timeScale}
+            onChange={onTimeScaleChange}
+            format={(v) => `${v.toFixed(1)}×`}
+          />
+          <p className="hint-tip">提高流速可观察开普勒第三定律：外行星周期随 a³/² 增长</p>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={differ}
+              onChange={(e) => onDifferChange(e.target.checked)}
+            />
+            <span>星系差速旋转</span>
+          </label>
         </div>
 
         <div className="switch-row">
