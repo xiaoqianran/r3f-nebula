@@ -1,36 +1,51 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import Scene from './components/Scene'
 import ControlPanel from './components/ControlPanel'
 import {
   DEFAULT_GALAXY,
+  DEFAULT_SIZE,
+  DEFAULT_SPEED,
+  loadSettings,
+  saveSettings,
   randomGalaxyConfig,
   type GalaxyParams,
   type PlanetDef,
   type Preset,
 } from './types'
 
-const DEFAULT_SIZE = 60
-const DEFAULT_SPEED = 1
-
 export default function App() {
-  const [galaxy, setGalaxy] = useState<GalaxyParams>(DEFAULT_GALAXY)
-  const [size, setSize] = useState(DEFAULT_SIZE)
-  const [speed, setSpeed] = useState(DEFAULT_SPEED)
-  const [autoRotate, setAutoRotate] = useState(true)
-  const [showOrbits, setShowOrbits] = useState(true)
-  const [bloom, setBloom] = useState(true)
+  // 从 localStorage 恢复上次的设置
+  const persisted = useMemo(loadSettings, [])
+
+  const [galaxy, setGalaxy] = useState<GalaxyParams>(persisted?.galaxy ?? DEFAULT_GALAXY)
+  const [size, setSize] = useState(persisted?.size ?? DEFAULT_SIZE)
+  const [speed, setSpeed] = useState(persisted?.speed ?? DEFAULT_SPEED)
+  const [autoRotate, setAutoRotate] = useState(persisted?.autoRotate ?? true)
+  const [showOrbits, setShowOrbits] = useState(persisted?.showOrbits ?? true)
+  const [bloom, setBloom] = useState(persisted?.bloom ?? true)
   const [collapsed, setCollapsed] = useState(false)
   const [selected, setSelected] = useState<PlanetDef | null>(null)
   const [focusId, setFocusId] = useState<string | null>(null)
+  const [showHud, setShowHud] = useState(true)
+  const [fps, setFps] = useState(0)
+  const [autoQuality, setAutoQuality] = useState(false)
   const glRef = useRef<THREE.WebGLRenderer | null>(null)
 
   // 结构性参数防抖：滑杆拖动时不频繁重建几何体
-  const [applied, setApplied] = useState<GalaxyParams>(DEFAULT_GALAXY)
+  const [applied, setApplied] = useState<GalaxyParams>(persisted?.galaxy ?? DEFAULT_GALAXY)
   useEffect(() => {
     const t = setTimeout(() => setApplied(galaxy), 180)
     return () => clearTimeout(t)
   }, [galaxy])
+
+  // 设置持久化：防抖写入 localStorage
+  useEffect(() => {
+    const t = setTimeout(() => {
+      saveSettings({ galaxy: applied, size, speed, autoRotate, showOrbits, bloom })
+    }, 300)
+    return () => clearTimeout(t)
+  }, [applied, size, speed, autoRotate, showOrbits, bloom])
 
   const handleGalaxyChange = useCallback((patch: Partial<GalaxyParams>) => {
     setGalaxy((prev) => ({ ...prev, ...patch }))
@@ -76,6 +91,9 @@ export default function App() {
     setFocusId(null)
   }, [])
 
+  const handleFps = useCallback((v: number) => setFps(v), [])
+  const handleLowPerf = useCallback(() => setAutoQuality(true), [])
+
   // 快捷键：Space 环绕 / S 截图 / R 重置 / Esc 返回总览
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -110,6 +128,8 @@ export default function App() {
         onGlReady={(gl) => {
           glRef.current = gl
         }}
+        onFps={handleFps}
+        onLowPerf={handleLowPerf}
         onSelectPlanet={selectPlanet}
       />
 
@@ -119,6 +139,14 @@ export default function App() {
         </h1>
         <p>React 18 · React Three Fiber · Three.js</p>
       </header>
+
+      {showHud && (
+        <div className="hud">
+          <span className="hud-fps">FPS {Math.round(fps)}</span>
+          <span>{(applied.count / 1000).toFixed(0)}k 粒子</span>
+          {autoQuality && <span className="hud-warn">性能模式 dpr=1</span>}
+        </div>
+      )}
 
       <ControlPanel
         galaxy={galaxy}
@@ -133,6 +161,8 @@ export default function App() {
         onShowOrbitsChange={setShowOrbits}
         bloom={bloom}
         onBloomChange={setBloom}
+        showHud={showHud}
+        onShowHudChange={setShowHud}
         onPreset={applyPreset}
         onRandom={handleRandom}
         onScreenshot={takeScreenshot}
@@ -161,6 +191,8 @@ export default function App() {
       <footer className="hint">
         拖拽旋转 · 滚轮缩放 · 点击行星聚焦 · Esc 返回 · Space 环绕 · S 截图 · R 重置
       </footer>
+
+      <div className="fade-in" aria-hidden="true" />
     </div>
   )
 }

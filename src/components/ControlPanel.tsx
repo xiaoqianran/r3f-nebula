@@ -60,6 +60,8 @@ interface ControlPanelProps {
   onShowOrbitsChange: (v: boolean) => void
   bloom: boolean
   onBloomChange: (v: boolean) => void
+  showHud: boolean
+  onShowHudChange: (v: boolean) => void
   onPreset: (p: Preset) => void
   onRandom: () => void
   onScreenshot: () => void
@@ -81,6 +83,8 @@ export default function ControlPanel({
   onShowOrbitsChange,
   bloom,
   onBloomChange,
+  showHud,
+  onShowHudChange,
   onPreset,
   onRandom,
   onScreenshot,
@@ -199,6 +203,10 @@ export default function ControlPanel({
           <label className="switch">
             <input type="checkbox" checked={bloom} onChange={(e) => onBloomChange(e.target.checked)} />
             <span>辉光</span>
+          </label>
+          <label className="switch">
+            <input type="checkbox" checked={showHud} onChange={(e) => onShowHudChange(e.target.checked)} />
+            <span>性能监视</span>
           </label>
         </div>
 
