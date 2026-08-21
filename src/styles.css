@@ -1,0 +1,346 @@
+:root {
+  --bg: #04050d;
+  --panel-bg: rgba(9, 12, 26, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --text: #e8eaf2;
+  --text-dim: #9aa1b5;
+  --accent: #6ea8ff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.app > canvas {
+  display: block;
+}
+
+/* 标题 */
+.title {
+  position: absolute;
+  top: 22px;
+  left: 24px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.title h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #f2f4fb;
+}
+
+.title h1 em {
+  font-style: normal;
+  margin-right: 10px;
+  letter-spacing: 5px;
+  background: linear-gradient(90deg, #ffffff, #8fb7ff 55%, #c9a7ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.title p {
+  margin-top: 6px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+/* 控制面板 */
+.panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 288px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.panel.collapsed .panel-head {
+  border-bottom: none;
+}
+
+.panel-head h2 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+.panel-body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel.collapsed .panel-body {
+  display: none;
+}
+
+.icon-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 滑杆 */
+.slider {
+  display: block;
+}
+
+.slider-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.slider-value {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.slider input[type='range'] {
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.slider input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #0b1024;
+  box-shadow: 0 0 10px rgba(110, 168, 255, 0.7);
+  cursor: pointer;
+}
+
+.slider input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #0b1024;
+  cursor: pointer;
+}
+
+/* 颜色 */
+.color-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.color-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-wrap input[type='color'] {
+  width: 30px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.color-wrap code {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* 开关 */
+.switch-row {
+  display: flex;
+  gap: 14px;
+  margin-top: 2px;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch input {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* 重置 */
+.reset-btn {
+  margin-top: 4px;
+  padding: 9px 0;
+  border: 1px solid rgba(110, 168, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(110, 168, 255, 0.1);
+  color: var(--accent);
+  font-size: 13px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reset-btn:hover {
+  background: rgba(110, 168, 255, 0.22);
+}
+
+/* 行星卡片 */
+.planet-card {
+  position: absolute;
+  left: 24px;
+  bottom: 52px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 380px;
+  padding: 14px 16px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  animation: rise 0.3s ease;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.planet-dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.planet-card-text h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.planet-card-text p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.planet-card .icon-btn {
+  flex: none;
+}
+
+/* 底部提示 */
+.hint {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  opacity: 0.75;
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* 移动端 */
+@media (max-width: 640px) {
+  .panel {
+    width: auto;
+    top: auto;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .title h1 {
+    font-size: 20px;
+  }
+
+  .planet-card {
+    bottom: 220px;
+  }
+
+  .hint {
+    display: none;
+  }
+}
